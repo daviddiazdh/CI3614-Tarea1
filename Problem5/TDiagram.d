@@ -3,21 +3,25 @@ import std.container;
 import std.array;
 import std.string;
 
+// Resultado estándar de comandos
 enum ResultCommand { OK = 0, ERROR = 1, END = 2 }
 
+// Nodo del grafo (representa un lenguaje)
 class Nodo {
     string nombre;
     Arista[] aristas;
+
     this(string nombre) {
         this.nombre = nombre;
         this.aristas = [];
     }
 }
 
+// Representa una arista entre lenguajes (INTERPRETE o TRADUCTOR)
 class Arista {
     string tipo;
     Nodo destino;
-    Nodo base;
+    Nodo base; // en caso de traductor, se usa lenguaje base
 
     this(string tipo, Nodo destino, Nodo base = null) {
         this.tipo = tipo;
@@ -26,14 +30,16 @@ class Arista {
     }
 }
 
-Nodo[string] grafo;
-string[string] programas; // nombrePrograma -> lenguaje (normalizado)
+// Diccionarios globales para almacenar los lenguajes y programas
+Nodo[string] grafo;       
+string[string] programas;
 
-// helper: normaliza nombres de lenguajes (usar consistentemente)
+// Normaliza nombres de lenguajes (mayúsculas)
 string norm(string s) {
     return s.toUpper();
 }
 
+// Crea un nodo si no existe, y lo devuelve
 Nodo obtenerOCrearNodo(string nombre) {
     auto key = norm(nombre);
     if (!(key in grafo)) {
@@ -42,12 +48,13 @@ Nodo obtenerOCrearNodo(string nombre) {
     return grafo[key];
 }
 
+// Agrega una relación de intérprete entre lenguajes
 void agregarInterprete(string lenguaje, string lenguajeBase) {
     auto keyLeng = norm(lenguaje);
     auto keyBase = norm(lenguajeBase);
 
+    // Crear los lenguajes si no existen
     if (!(keyLeng in grafo)) definirLenguaje(lenguaje);
-    
     if (!(keyBase in grafo)) definirLenguaje(lenguajeBase);
 
     auto nodoLenguaje = grafo[keyLeng];
@@ -56,15 +63,15 @@ void agregarInterprete(string lenguaje, string lenguajeBase) {
     nodoLenguaje.aristas ~= new Arista("INTERPRETE", nodoBase);
 }
 
+// Agrega una relación de traductor entre lenguajes
 void agregarTraductor(string lenguajeOrigen, string lenguajeDestino, string lenguajeBase) {
     auto kOrig = norm(lenguajeOrigen);
     auto kDest = norm(lenguajeDestino);
     auto kBase = norm(lenguajeBase);
 
+    // Crear los lenguajes si no existen
     if (!(kOrig in grafo)) definirLenguaje(lenguajeOrigen);
-
     if (!(kDest in grafo)) definirLenguaje(lenguajeDestino);
-
     if (!(kBase in grafo)) definirLenguaje(lenguajeBase);
 
     auto nodoOrigen = grafo[kOrig];
@@ -74,24 +81,29 @@ void agregarTraductor(string lenguajeOrigen, string lenguajeDestino, string leng
     nodoOrigen.aristas ~= new Arista("TRADUCTOR", nodoDestino, nodoBase);
 }
 
+// Determina si un lenguaje puede ejecutarse localmente
 bool puedeEjecutar(Nodo nodo, bool[string]* visitados = null) {
     bool[string] local;
     if (visitados is null)
         visitados = &local;
 
+    // Si ya se visitó el nodo, evitar ciclos
     if ((*visitados).get(nodo.nombre, false))
         return false;
     (*visitados)[nodo.nombre] = true;
 
+    // Caso base: si es el lenguaje LOCAL
     if (nodo.nombre == norm("LOCAL"))
         return true;
 
+    // Revisar aristas salientes
     foreach (ref arista; nodo.aristas) {
         if (arista.tipo == "INTERPRETE") {
+            
             if (puedeEjecutar(arista.destino, visitados))
                 return true;
         } else if (arista.tipo == "TRADUCTOR") {
-            // Copias separadas para no contaminar comprobaciones
+            
             bool[string] copiaBase = (*visitados).dup;
             bool[string] copiaDestino = (*visitados).dup;
             if (puedeEjecutar(arista.base, &copiaBase) &&
@@ -103,19 +115,19 @@ bool puedeEjecutar(Nodo nodo, bool[string]* visitados = null) {
     return false;
 }
 
+// Crea un nuevo lenguaje en el grafo
 void definirLenguaje(string nombre) {
-    // A esta función no le hace falta validar la existencia del lenguaje, porque quien llama ya sabe que el lenguaje no está.
     auto key = norm(nombre);
     grafo[key] = new Nodo(key);
 }
 
+// Define un nuevo programa con su lenguaje asociado
 bool definirPrograma(string nombre, string lenguaje) {
     if (nombre in programas) {
         writeln("Error: El programa ", nombre, " ya está definido.");
         return false;
     }
 
-    // Normalizar lenguaje al guardarlo
     auto keyLang = norm(lenguaje);
 
     // Crear el lenguaje si no existe
@@ -127,18 +139,19 @@ bool definirPrograma(string nombre, string lenguaje) {
     return true;
 }
 
+// Comprueba si un programa puede ejecutarse localmente
 bool programaEjecutable(string nombre) {
     if (!(nombre in programas)) {
         writeln("Error: programa ", nombre, " no definido.");
         return false;
     }
 
-    string lenguaje = programas[nombre]; // ya normalizado
+    string lenguaje = programas[nombre];
     auto nodo = grafo[lenguaje];
     return puedeEjecutar(nodo);
 }
 
-
+// Procesa los comandos del usuario
 ResultCommand procesarLinea(string linea){
     linea = linea.strip();
     if (linea.length == 0)
@@ -154,6 +167,7 @@ ResultCommand procesarLinea(string linea){
         writeln("Saliendo...");
         return ResultCommand.END;
     }
+    
     else if (comando == "DEFINIR") {
         if (partes.length < 2) {
             writeln("Uso: DEFINIR <tipo> [args]");
@@ -201,6 +215,7 @@ ResultCommand procesarLinea(string linea){
                 return ResultCommand.ERROR;
         }
     }
+    
     else if (comando == "EJECUTABLE") {
         if (partes.length != 2) {
             writeln("Uso: EJECUTABLE <nombre>");
@@ -224,7 +239,7 @@ ResultCommand procesarLinea(string linea){
 }
 
 void main() {
-    // definimos LOCAL normalizado
+    // Se define el lenguaje LOCAL desde el inicio
     definirLenguaje("LOCAL");
 
     string linea;
@@ -234,61 +249,61 @@ void main() {
 
         ResultCommand result = procesarLinea(linea);
         if (result == ResultCommand.END) break;
-
     }
 }
 
-
 unittest {
-
-    
-
-    // Definir un inteprete antes de la existencia del lenguaje java
+    // Intérprete antes de la existencia de su lenguaje
     assert(procesarLinea("definir interprete local java") == ResultCommand.OK);
 
-    // Definir y ejecutar un programa en C
+    // Programa en C sin ruta a LOCAL
     assert(procesarLinea("definir programa c1 c") == ResultCommand.OK);
     assert(procesarLinea("ejecutable c1") == ResultCommand.ERROR);
 
-    // Definir un traductor para C en java hacia java
+    // Traductor de C en base a JAVA hacia JAVA (permite ejecutar C)
     assert(procesarLinea("definir traductor java c java") == ResultCommand.OK);
-
-    // Ya que hay un traductor para c, entonces definir un programa en c y ejecutarlo
     assert(procesarLinea("ejecutable c1") == ResultCommand.OK);
 
-    // Definir otro programa en python, pero con mayusculas
+    // Programa en Python
     assert(procesarLinea("definir PROGRAMA p1 python") == ResultCommand.OK);
-    // Verificar que reconozca el mismo Python
     assert(procesarLinea("definir interprete local PYTHON") == ResultCommand.OK);
-    // Debe ejecutar
     assert(procesarLinea("ejecutable p1") == ResultCommand.OK);
 
-    // Tratar de definir un programa con el mismo nombre de uno ya creado
+    // Programa duplicado
     assert(procesarLinea("definir PROGRAMA p1 C#") == ResultCommand.ERROR);
 
-    // Ejecutar programa inexistente
+    // Programa inexistente
     assert(procesarLinea("ejecutable j1") == ResultCommand.ERROR);
 
-    // No enviar ningun comando (No se cuenta como error)
+    // Comandos vacíos o con espacios
     assert(procesarLinea("") == ResultCommand.OK);
     assert(procesarLinea("         ") == ResultCommand.OK);
 
-    // Mala sintaxis en definir
+    // Sintaxis inválida
     assert(procesarLinea("definir") == ResultCommand.ERROR);
     assert(procesarLinea("definir programa hola") == ResultCommand.ERROR);
     assert(procesarLinea("definir traductor hola python") == ResultCommand.ERROR);
     assert(procesarLinea("definir al_arco") == ResultCommand.ERROR);
-
-    // Mala sintaxis en ejecutable
     assert(procesarLinea("ejecutable") == ResultCommand.ERROR);
     assert(procesarLinea("ejecutable hola.py gol") == ResultCommand.ERROR);
-
-    // Comando inexistente
     assert(procesarLinea("comando_que_no_existe") == ResultCommand.ERROR);
+
+    // Cadena de traductores (c → d → local)
+    assert(procesarLinea("definir traductor local d local") == ResultCommand.OK);
+    assert(procesarLinea("definir traductor local c d") == ResultCommand.OK);
+    assert(procesarLinea("definir programa chain_prog c") == ResultCommand.OK);
+    assert(procesarLinea("ejecutable chain_prog") == ResultCommand.OK);
+
+    // Programa en lenguaje aislado sin intérprete ni traductor
+    assert(procesarLinea("definir programa solitario brainfuck") == ResultCommand.OK);
+    assert(procesarLinea("ejecutable solitario") == ResultCommand.ERROR);
+
+    // Definir un programa que esté en local de una vez
+    assert(procesarLinea("definir programa compilable local") == ResultCommand.OK);
+    assert(procesarLinea("ejecutable compilable") == ResultCommand.OK);
 
     // Salida
     assert(procesarLinea("salir") == ResultCommand.END);
-    
 
     writeln("¡Todos los tests pasaron correctamente!");
 }

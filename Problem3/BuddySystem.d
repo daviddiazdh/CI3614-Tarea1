@@ -3,26 +3,27 @@ import std.conv;
 import std.array;
 import std.string;
 
+// Enum para representar los resultados de comandos
 enum ResultCommand {
     OK = 0,          // Comando ejecutado sin errores
     ERROR = 1,       // Comando inválido o error de sintaxis
-    END = 2        // Solicitud de salida
+    END = 2          // Solicitud de salida del programa
 }
 
-// Manejar diferentes estados
+// Estados posibles de un bloque en el Buddy System
 enum State { LIBRE, OCUPADO, DIVIDIDO }
 
-// Estructura nodo para la implementación de un árbol
+// Estructura que representa cada nodo (bloque de memoria)
 struct Node {
-    size_t size;      
-    State state;       
-    string name;     
-    Node* left;        
-    Node* right;
-    Node* parent;       
+    size_t size;       // Tamaño del bloque
+    State state;       // Estado del bloque
+    string name;       // Nombre del proceso o reserva
+    Node* left;        // Hijo izquierdo
+    Node* right;       // Hijo derecho
+    Node* parent;      // Referencia al nodo padre
 }
 
-// Inicializador de un nodo
+// Crea la raíz del árbol del buddy system
 Node* crearBuddyTree(size_t size) {
     auto nodo = new Node;
     nodo.size = size;
@@ -30,7 +31,7 @@ Node* crearBuddyTree(size_t size) {
     return nodo;
 }
 
-// Función que crea dos nodos hijos para un nodo que pretende ser dividido
+// Divide un nodo en dos nodos hijos (buddies)
 void subdividir(Node* nodo) {
     if (nodo.size > 1) {
         nodo.state = State.DIVIDIDO;
@@ -41,7 +42,7 @@ void subdividir(Node* nodo) {
     }
 }
 
-// Función para reservar un nodo de memoria
+// Reserva un bloque de memoria del tamaño solicitado
 bool reservarNodo(Node* node, string name, size_t size){
     if(node is null) return false;
 
@@ -72,9 +73,9 @@ bool reservarNodo(Node* node, string name, size_t size){
     }
 
     return false;
-
 }
 
+// Intenta compactar los buddies si ambos están libres
 void compactar(Node* parent) {
     if (parent is null) return;
 
@@ -87,11 +88,12 @@ void compactar(Node* parent) {
         parent.right = null;
         parent.state = State.LIBRE;
 
-        // y seguir subiendo
+        // seguir subiendo en el árbol
         compactar(parent.parent);
     }
 }
 
+// Libera un nodo específico
 void liberar(Node* node){
     node.state = State.LIBRE;
     node.name = "";
@@ -99,7 +101,7 @@ void liberar(Node* node){
     compactar(node.parent);
 }
 
-// Función para liberar el espacio reservado en un nodo basado en el nombre
+// Libera un bloque buscando por nombre
 bool liberarNodo(Node* node, string name){
     if(node is null) return false;
 
@@ -112,10 +114,9 @@ bool liberarNodo(Node* node, string name){
     if (freeLeft) return true;
     
     return liberarNodo(node.right, name);
-
 }
 
-// Función para redondear un número a la potencia de dos superior más cercana
+// Calcula la potencia de dos superior más cercana a n
 size_t proximaPotenciaDeDos(size_t n){
     if( n <= 1 ) return 1;
     size_t p = 1;
@@ -125,7 +126,7 @@ size_t proximaPotenciaDeDos(size_t n){
     return p;
 }
 
-// Función para redondear un número a la potencia de dos inferior más cercana
+// Calcula la potencia de dos inferior más cercana a n
 size_t anteriorPotenciaDeDos(size_t n){
     size_t power_iter = 2;
     size_t power_buddy;
@@ -139,6 +140,7 @@ size_t anteriorPotenciaDeDos(size_t n){
     return power_buddy;
 }
 
+// Muestra visualmente el árbol del buddy system
 void mostrarBuddyTree(Node* nodo, size_t nivel = 0){
     if (nodo is null) return;
     
@@ -154,7 +156,7 @@ void mostrarBuddyTree(Node* nodo, size_t nivel = 0){
     }
 }
 
-
+// Validación de sintaxis para comando "reservar"
 bool validarReservar(string[] entries_arr){
     if(entries_arr.length != 3) return false;
     try{    
@@ -170,20 +172,21 @@ bool validarReservar(string[] entries_arr){
     return true;
 }
 
+// Validación de sintaxis para comando "liberar"
 bool validarLiberar(string[] entries_arr){
     return entries_arr.length == 2;
 }
 
+// Validación para comandos sin parámetros (mostrar, salir)
 bool validarMonoCommands(string[] entries_arr){
     return entries_arr.length == 1;
 }
 
-
+// Procesa la ejecución de un comando según su tipo
 ResultCommand proccessInput(int option, Node* root, size_t parameter_blocks = 0, string parameter_name = ""){
 
     switch(option){
         case 1:
-
             // Redondeamos a la próxima potencia de dos
             parameter_blocks = proximaPotenciaDeDos(parameter_blocks);
 
@@ -196,7 +199,6 @@ ResultCommand proccessInput(int option, Node* root, size_t parameter_blocks = 0,
             }
 
         case 2:
-
             if(liberarNodo(root, parameter_name)){
                 writeln("Bloque de memoria liberado con exito.");
                 return ResultCommand.OK;
@@ -214,12 +216,12 @@ ResultCommand proccessInput(int option, Node* root, size_t parameter_blocks = 0,
             return ResultCommand.END;
 
         default: break; 
-
     }
+
     return ResultCommand.OK;
 }
 
-
+// Analiza y valida la entrada del usuario (CLI)
 ResultCommand procesarComando(Node* root, string entry){
 
     entry = entry.strip();
@@ -269,6 +271,7 @@ ResultCommand procesarComando(Node* root, string entry){
     }
 }
 
+// Valida los argumentos de inicio del programa
 ResultCommand memory_validator(string[] args){
 
     if(args.length < 2 || args.length > 2){
@@ -289,6 +292,7 @@ ResultCommand memory_validator(string[] args){
     return ResultCommand.OK;
 }
 
+// Función principal
 void main(string[] args){
 
     ResultCommand validate = memory_validator(args);
@@ -297,13 +301,13 @@ void main(string[] args){
 
     size_t memory_size = to!size_t(args[1]);
 
-    // Se debe redondear a la potencia de dos más cercana por debajo al valor dado
+    // Redondeamos a la potencia de dos inferior más cercana
     size_t power_buddy = anteriorPotenciaDeDos(memory_size); 
     writeln("La memoria disponible para el Buddy System es: ", power_buddy);
 
     Node* root = crearBuddyTree(power_buddy);
 
-    // Flujo de programa real
+    // Ciclo principal de comandos
     while(true){
         write("> ");
         string entry = readln();
@@ -312,73 +316,53 @@ void main(string[] args){
 
         if (exit == ResultCommand.END) break;
     }
-
 }
 
+// --------------------- PRUEBAS UNITARIAS ---------------------
 
 unittest {
-
-    // Si ejecutan el codigo con un valor de memoria invalido o con menos o más parámetros
+    // Validación de entrada de memoria incorrecta
     assert(memory_validator(["programa", "holaaa"]) == ResultCommand.END);
     assert(memory_validator(["programa"]) == ResultCommand.END);
     assert(memory_validator(["programa", "holaaa", "holaa"]) == ResultCommand.END);
 
-
     size_t test_memory_size = 1056;
     size_t test_power_buddy = anteriorPotenciaDeDos(test_memory_size);
-
     assert(test_power_buddy == 1024);
 
     Node* test_root = crearBuddyTree(test_power_buddy);
 
-    // Reservar bloque de código con nombre sin espacio
+    // Reservar y liberar
     assert(procesarComando(test_root, "reservar 32 nombre_1") == ResultCommand.OK);
-    // Reservar un bloque de igual tamaño, para que tome su buddie, pero con mismo nombre
     assert(procesarComando(test_root, "reservar 32 nombre_1") == ResultCommand.OK);
-    
-
-    // Liberar ambos bloques para cubrir la compactación
     assert(procesarComando(test_root, "liberar nombre_1") == ResultCommand.OK);
     assert(procesarComando(test_root, "liberar nombre_1") == ResultCommand.OK);
-
-    // Liberar un bloque no existente
     assert(procesarComando(test_root, "liberar nombre_1") == ResultCommand.ERROR);
 
-    // Mala sintaxis de comando liberar
+    // Casos con errores de sintaxis
     assert(procesarComando(test_root, "liberar nombre apellido") == ResultCommand.ERROR);
-
-    // Reservar bloque de código con nombre con espacio
     assert(procesarComando(test_root, "reservar 32 nombre 1") == ResultCommand.ERROR);
-
-    // Reservar un bloque más grande que la memoria del sistema
     assert(procesarComando(test_root, "reservar 2046 proceso_1") == ResultCommand.ERROR);
-
-    // Mostrar el árbol vacío
-    assert(procesarComando(test_root, "mostrar") == ResultCommand.OK);
-
-    // Mostrar el árbol con un proceso
-    assert(procesarComando(test_root, "reservar 502 proceso_1") == ResultCommand.OK);
-    assert(procesarComando(test_root, "mostrar") == ResultCommand.OK);
-
-    // Tratar de reservar sin buen formato
     assert(procesarComando(test_root, "reservar treinta proceso_1") == ResultCommand.ERROR);
     assert(procesarComando(test_root, "reservar 25   ") == ResultCommand.ERROR);
-
-    // No manda comando
     assert(procesarComando(test_root, "") == ResultCommand.ERROR);
-
-    // Errar comando mostrar
     assert(procesarComando(test_root, "mostrar 23") == ResultCommand.ERROR);
-
-    // Comando desconocido
     assert(procesarComando(test_root, "buscar 23") == ResultCommand.ERROR);
-
-    // Sintaxis errada de salir
     assert(procesarComando(test_root, "salir 123") == ResultCommand.ERROR);
 
-    // Salir del programa
+    // Mostrar árbol y salir
+    assert(procesarComando(test_root, "mostrar") == ResultCommand.OK);
+    assert(procesarComando(test_root, "reservar 502 proceso_1") == ResultCommand.OK);
+    assert(procesarComando(test_root, "mostrar") == ResultCommand.OK);
     assert(procesarComando(test_root, "salir") == ResultCommand.END);
-    
+
+    // Subdivisión al reservar menos de la mitad
+    Node* t = crearBuddyTree(64);
+    assert(reservarNodo(t, "A", 8) == true);
+    assert(t.state == State.DIVIDIDO);
+
+    // Redondeo exacto
+    assert(proximaPotenciaDeDos(128) == 128);
 
     writeln("¡Todos los tests pasaron correctamente!");
 }
