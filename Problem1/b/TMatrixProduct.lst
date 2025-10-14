@@ -1,21 +1,16 @@
        |import std.stdio;
        |import std.conv;
-       |import std.algorithm : all;
+       |import std.algorithm;
        |import core.stdc.stdlib : exit;
+       |import std.string;
+       |import std.array;
        |
-       |alias Matrix = int[][];
+       |alias Matrix = double[][];
        |
        |Matrix matrix_transpose_product(Matrix matrix){
       5|    Matrix matrix_product;
       5|    int N = matrix.length;
-       |
-       |    // Verificar que la matriz es cuadrada
-     13|    bool matrix_nxn_verification = matrix.all!(x => x.length == N);
-      5|    if(!matrix_nxn_verification){
-0000000|        writeln("Error: La matriz no es cuadrada.");
-0000000|        exit(1);
-       |    }
-       |
+       |    
        |    // Crear la matriz inicializada con 0's
       5|    matrix_product.length = N;
      39|    foreach(i; 0..N){
@@ -26,7 +21,7 @@
      26|    for (int i = 0; i < N; i++){
        |        // Iterador filas nuevamente
      52|        for(int j = 0; j < N; j++){
-     18|            int sum = 0;
+     18|            double sum = 0;
        |            // Iterador de productos
     124|            for(int k = 0; k < N; k++){
      44|                sum = sum + matrix[i][k] * matrix[j][k];
@@ -39,7 +34,37 @@
        |
        |void main(){
        |
-0000000|    Matrix matrix_product = matrix_transpose_product([[1, 2, 4],[1, 3, 5], [1, 2, 3]]);
+0000000|    int n;
+0000000|    writeln("Introduce la dimensión n de la matriz (n x n): ");
+       |    
+       |    try{
+0000000|        n = to!int(readln().strip());
+       |    } catch(ConvException){
+0000000|        writeln("Error: Debe enviar un valor numérico.");
+0000000|        return;
+       |    }
+       |
+0000000|    double[][] matrix;
+0000000|    matrix.length = n;
+       |
+0000000|    writeln("Introduce los elementos de la matriz fila por fila:");
+0000000|    foreach (i; 0 .. n) {
+0000000|        auto line = readln().strip.split();
+       |        try{
+0000000|            matrix[i] = line.map!(to!double).array;
+       |        } catch(ConvException e){
+0000000|            writeln("Error: Debe enviar solo valores numéricos");
+0000000|            return;
+       |        }
+       |        
+0000000|        if (matrix[i].length != n) {
+0000000|            writeln("Error: la fila debe tener exactamente ", n, " valores.");
+0000000|            return;
+       |        }
+       |    }
+       |
+       |    // Se debe colocar la matriz aquí
+0000000|    Matrix matrix_product = matrix_transpose_product(matrix);
 0000000|    writeln(matrix_product);
 0000000|    exit(0);
        |    
@@ -47,7 +72,6 @@
        |
        |unittest {
        |
-       |    // --- Pruebas unitarias ---
       1|    Matrix m1 = [[1, 2, 4],
        |                 [1, 3, 5],
        |                 [1, 2, 3]];
@@ -76,12 +100,6 @@
       1|    Matrix m5 = [];
       1|    assert(matrix_transpose_product(m5).length == 0);
        |
-       |    // Matriz no cuadrada (debería terminar con exit)
-       |    // Nota: no se puede probar directamente con assert porque la función llama a exit(1)
-       |    // Pero podemos dejarlo como comentario para indicar el caso.
-       |    // Matrix m6 = [[1, 2, 3], [4, 5, 6]];
-       |    // matrix_transpose_product(m6); // <-- debería imprimir error y salir.
-       |
       1|    writeln("¡Todos los tests pasaron correctamente!");
        |}
-TMatrixProduct.d is 85% covered
+TMatrixProduct.d is 58% covered
